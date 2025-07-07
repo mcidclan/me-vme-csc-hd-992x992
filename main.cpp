@@ -49,23 +49,24 @@ static int initMe() {
   return 0;
 }
 
+#define MOVE_STEP 2
 static unsigned int __attribute__((aligned(16))) list[1024] = {0};
 
 // Update frame buffer destination
 static void updateDisplayBuffer(SceCtrlData& ctl) {
   static u32 l = 0;
   static u32 t = 0;
-  if ((ctl.Buttons & PSP_CTRL_LEFT) && l > 0) {
-    l -= 1;
+  if ((ctl.Buttons & PSP_CTRL_LEFT) && l >= MOVE_STEP) {
+    l -= MOVE_STEP;
   }
-  if ((ctl.Buttons & PSP_CTRL_RIGHT) && l < (FRAME_YCBCR_WIDTH - 480)) {
-    l += 1;
+  if ((ctl.Buttons & PSP_CTRL_RIGHT) && l <= (FRAME_YCBCR_WIDTH - 480 - MOVE_STEP)) {
+    l += MOVE_STEP;
   }
-  if ((ctl.Buttons & PSP_CTRL_UP) && t > 0) {
-    t -= 1;
+  if ((ctl.Buttons & PSP_CTRL_UP) && t >= MOVE_STEP) {
+    t -= MOVE_STEP;
   }
-  if ((ctl.Buttons & PSP_CTRL_DOWN) && t < (FRAME_YCBCR_HEIGHT - 272)) {
-    t += 1;
+  if ((ctl.Buttons & PSP_CTRL_DOWN) && t <= (FRAME_YCBCR_HEIGHT - 272 - MOVE_STEP)) {
+    t += MOVE_STEP;
   }
   sceGuStart(GU_DIRECT, list);
   sceGuCopyImage(GU_PSM_8888, l, t, 480, 272, STRIDE, (void*)DST_BUFFER_RGB,
@@ -99,7 +100,7 @@ static int setupCSC() {
   hw(0xBC800144) = DST_BUFFER_RGB;
   hw(0xBC800148) = DST_BUFFER_RGB + BUFFER_2_OFFSET;
   
-  // bit [...8] stride | bit[1] ycbcr format | bit[0] separate dst 2 rendering
+  // bit [...8] stride | bit[1] pixel format (0: 8888, 1: 5650) | bit[0] separate dst 2 rendering
   hw(0xBC80014C) = (STRIDE << 8) | 0 << 1 | 1;
   
   // Use default matrice values, with adjusted luma
@@ -121,8 +122,6 @@ int main() {
 
   sceGuInit();
   pspDebugScreenInitEx(0x0, PSP_DISPLAY_PIXEL_FORMAT_8888, 0);
-  pspDebugScreenSetOffset(0);
-  pspDebugScreenSetBase((u32*)(UNCACHED_USER_MASK | GE_EDRAM_BASE));
   sceDisplaySetFrameBuf((void*)(UNCACHED_USER_MASK | GE_EDRAM_BASE),
     512, PSP_DISPLAY_PIXEL_FORMAT_8888, PSP_DISPLAY_SETBUF_NEXTFRAME);
   
