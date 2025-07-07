@@ -9,7 +9,7 @@ static u32 DST_BUFFER_RGB;
 #define STRIDE                1024
 #define FRAME_YCBCR_WIDTH     992
 #define FRAME_YCBCR_HEIGHT    992
-constexpr u32 BUFFER_2_OFFSET   = STRIDE * FRAME_YCBCR_HEIGHT * 2;
+constexpr u32 BUFFER_2_OFFSET   = STRIDE * FRAME_YCBCR_HEIGHT;
 constexpr u32 FRAME_YCBCR_SIZE  = FRAME_YCBCR_WIDTH * FRAME_YCBCR_HEIGHT;
 constexpr u32 Y_SIZE            = FRAME_YCBCR_SIZE;
 constexpr u32 CBCR_SIZE         = FRAME_YCBCR_SIZE / 4;
@@ -69,7 +69,7 @@ static void updateDisplayBuffer(SceCtrlData& ctl) {
     t += MOVE_STEP;
   }
   sceGuStart(GU_DIRECT, list);
-  sceGuCopyImage(GU_PSM_8888, l, t, 480, 272, STRIDE, (void*)DST_BUFFER_RGB,
+  sceGuCopyImage(GU_PSM_5650, l, t, 480, 272, STRIDE, (void*)DST_BUFFER_RGB,
     0, 0, 512, (void*)(UNCACHED_USER_MASK | GE_EDRAM_BASE));
   sceGuFinish();
   sceGuSync(0,0);
@@ -101,7 +101,7 @@ static int setupCSC() {
   hw(0xBC800148) = DST_BUFFER_RGB + BUFFER_2_OFFSET;
   
   // bit [...8] stride | bit[1] pixel format (0: 8888, 1: 5650) | bit[0] separate dst 2 rendering
-  hw(0xBC80014C) = (STRIDE << 8) | 0 << 1 | 1;
+  hw(0xBC80014C) = (STRIDE << 8) | 1 << 1 | 1;
   
   // Use default matrice values, with adjusted luma
   const float brightness = 1.16f;
@@ -121,14 +121,14 @@ int main() {
   }
 
   sceGuInit();
-  pspDebugScreenInitEx(0x0, PSP_DISPLAY_PIXEL_FORMAT_8888, 0);
+  pspDebugScreenInitEx(0x0, PSP_DISPLAY_PIXEL_FORMAT_565, 0);
   sceDisplaySetFrameBuf((void*)(UNCACHED_USER_MASK | GE_EDRAM_BASE),
-    512, PSP_DISPLAY_PIXEL_FORMAT_8888, PSP_DISPLAY_SETBUF_NEXTFRAME);
+    512, PSP_DISPLAY_PIXEL_FORMAT_565, PSP_DISPLAY_SETBUF_NEXTFRAME);
   
   pspDebugScreenPrintf("Loading YCbCr planes...\n");
   meGetUncached32(&mem, 4);
 
-  u32* const _buff = (u32*)memalign(16, 1024*1024*4);
+  u32* const _buff = (u32*)memalign(16, 1024*1024*2);
   DST_BUFFER_RGB = UNCACHED_USER_MASK | (u32)_buff;
   
   // Load Y, Cb and Cr
